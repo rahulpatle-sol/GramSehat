@@ -1,0 +1,559 @@
+{
+  "info": {
+    "name": "GramSehat API",
+    "description": "API Collection for GramSehat - Healthcare app for rural India",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api"
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9450001234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/send-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "send-otp"]
+            }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9450001234\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify-otp"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.token) {",
+                  "        pm.collectionVariables.set('authToken', jsonData.token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rahul Kumar\",\n  \"pincode\": \"224201\",\n  \"village\": \"Bela\",\n  \"district\": \"Ambedkar Nagar\",\n  \"state\": \"Uttar Pradesh\",\n  \"language\": \"hi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Symptoms",
+      "item": [
+        {
+          "name": "Report Symptoms",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symptoms\": [\"fever\", \"headache\", \"cough\"],\n  \"primarySymptom\": \"fever\",\n  \"severity\": 2,\n  \"pincode\": \"224201\",\n  \"lat\": 26.8721,\n  \"lng\": 82.1987,\n  \"notes\": \"Patient has mild fever since yesterday\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/symptoms/report",
+              "host": ["{{baseUrl}}"],
+              "path": ["symptoms", "report"]
+            }
+          }
+        },
+        {
+          "name": "Get Symptom History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/symptoms/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["symptoms", "history"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Outbreak",
+      "item": [
+        {
+          "name": "Get Nearby Outbreaks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/outbreak/nearby?pincode=224201",
+              "host": ["{{baseUrl}}"],
+              "path": ["outbreak", "nearby"],
+              "query": [
+                {
+                  "key": "pincode",
+                  "value": "224201"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Outbreak History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/outbreak/history?pincode=224201&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["outbreak", "history"],
+              "query": [
+                {
+                  "key": "pincode",
+                  "value": "224201"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Medicine",
+      "item": [
+        {
+          "name": "Scan Medicine (by barcode)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/medicine/scan/8901234567890",
+              "host": ["{{baseUrl}}"],
+              "path": ["medicine", "scan", "8901234567890"]
+            }
+          }
+        },
+        {
+          "name": "Search Medicines",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/medicine/search?q=paracetamol&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["medicine", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "paracetamol"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Medicine",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcode\": \"8901234567890\",\n  \"name\": \"Dolo 650\",\n  \"genericName\": \"Paracetamol\",\n  \"manufacturer\": \"Macleods Pharmaceuticals\",\n  \"dosage\": \"650mg\",\n  \"uses\": [\"Fever\", \"Pain relief\", \"Headache\"],\n  \"sideEffects\": [\"Nausea\", \"Stomach pain\"],\n  \"price\": 30.00,\n  \"isVerified\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/medicine",
+              "host": ["{{baseUrl}}"],
+              "path": ["medicine"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Records",
+      "item": [
+        {
+          "name": "Get Health Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/records",
+              "host": ["{{baseUrl}}"],
+              "path": ["records"]
+            }
+          }
+        },
+        {
+          "name": "Get Health Records (by member)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/records?memberId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["records"],
+              "query": [
+                {
+                  "key": "memberId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Health Record",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": null,\n  \"type\": \"checkup\",\n  \"title\": \"Annual Health Checkup\",\n  \"description\": \"Routine checkup - all normal\",\n  \"doctorName\": \"Dr. Amit Singh\",\n  \"hospitalName\": \"District Hospital\",\n  \"date\": \"2024-01-15\",\n  \"attachments\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/records",
+              "host": ["{{baseUrl}}"],
+              "path": ["records"]
+            }
+          }
+        },
+        {
+          "name": "Get Single Health Record",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/records/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["records", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Health Record",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/records/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["records", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Family",
+      "item": [
+        {
+          "name": "Get Family Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/family",
+              "host": ["{{baseUrl}}"],
+              "path": ["family"]
+            }
+          }
+        },
+        {
+          "name": "Add Family Member",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sita Devi\",\n  \"age\": 45,\n  \"gender\": \"female\",\n  \"relation\": \"wife\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/family",
+              "host": ["{{baseUrl}}"],
+              "path": ["family"]
+            }
+          }
+        },
+        {
+          "name": "Update Family Member",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sita Devi\",\n  \"age\": 46\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/family/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["family", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Family Member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/family/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["family", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PHC / Hospitals",
+      "item": [
+        {
+          "name": "Get Nearby PHC",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/phc/nearby?lat=26.8721&lng=82.1987&radius=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["phc", "nearby"],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "26.8721"
+                },
+                {
+                  "key": "lng",
+                  "value": "82.1987"
+                },
+                {
+                  "key": "radius",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Nearby PHC (by pincode)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/phc/nearby?pincode=224201",
+              "host": ["{{baseUrl}}"],
+              "path": ["phc", "nearby"],
+              "query": [
+                {
+                  "key": "pincode",
+                  "value": "224201"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search PHC",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/phc/search?q=health&type=PHC",
+              "host": ["{{baseUrl}}"],
+              "path": ["phc", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "health"
+                },
+                {
+                  "key": "type",
+                  "value": "PHC"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get PHC Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/phc/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["phc", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ASHA Worker",
+      "item": [
+        {
+          "name": "Get ASHA Alerts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/asha/alerts",
+              "host": ["{{baseUrl}}"],
+              "path": ["asha", "alerts"]
+            }
+          }
+        },
+        {
+          "name": "Resolve Alert",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/asha/alert/1/resolve",
+              "host": ["{{baseUrl}}"],
+              "path": ["asha", "alert", "1", "resolve"]
+            }
+          }
+        },
+        {
+          "name": "Get ASHA Reports",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/asha/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["asha", "reports"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/../health",
+              "host": ["{{baseUrl}}"],
+              "path": ["..", "health"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
