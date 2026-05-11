@@ -386,14 +386,6 @@ Week 6:  Testing → Play Store build (EAS) → Deploy backend
 
 ## 11. PROMPT TO START CODING
 
-Paste this after the spec when prompting an AI to code:
 
-> "Using the spec above, start with the Node.js backend.
-> Create the full project structure, install dependencies,
-> setup Express server, MongoDB connection, and implement
-> the Auth module (send-otp, verify-otp, profile) with
-> Twilio SMS OTP and JWT. Use ES modules."
-
----
 
 *Built for Bharat. GramSehat — Swasth Gaon, Swasth Desh 🇮🇳*
