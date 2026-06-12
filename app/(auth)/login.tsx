@@ -4,24 +4,24 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 import * as Google from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
-import Constants from 'expo-constants';
 import i18n from '../../src/i18n';
 import { useAuth } from '../../src/store/AuthContext';
 
-const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || Constants.expoConfig?.extra?.googleClientId || 'YOUR_GOOGLE_CLIENT_ID';
-const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || Constants.expoConfig?.extra?.googleIosClientId || 'YOUR_IOS_CLIENT_ID';
+const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
 
 export default function LoginScreen(): ReactElement {
   const [loading, setLoading] = useState<boolean>(false);
-  const { login } = useAuth();
+  const { googleSignIn } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+  const discovery = Google.useAutoDiscovery('https://accounts.google.com');
+  const redirectUri = Google.makeRedirectUri({ scheme: 'gramsehat' });
+  const [request, , promptAsync] = Google.useAuthRequest({
     clientId: GOOGLE_CLIENT_ID,
-    iosClientId: GOOGLE_IOS_CLIENT_ID,
-    scopes: ['profile', 'email'],
-  });
+    scopes: ['openid', 'profile', 'email'],
+    redirectUri,
+  }, discovery);
 
   const handleGoogleSignIn = async (): Promise<void> => {
     if (!request) {
@@ -31,9 +31,16 @@ export default function LoginScreen(): ReactElement {
     setLoading(true);
     try {
       const result = await promptAsync();
-      if (result?.type === 'success' && result.params?.id_token) {
-        await login(result.params.id_token);
-        router.replace('/(tabs)');
+      if (result?.type === 'success') {
+        const idToken = result.params?.id_token;
+        if (idToken) {
+          const authResponse = await googleSignIn(idToken);
+          if (authResponse.user.isProfileComplete) {
+            router.replace('/(tabs)');
+          } else {
+            router.replace('/(auth)/profile-setup');
+          }
+        }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Something went wrong';
