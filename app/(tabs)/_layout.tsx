@@ -1,17 +1,17 @@
-import React, { ReactElement, useRef, useEffect } from 'react';
+import React, { ReactElement, useState, useEffect } from 'react';
 import { Tabs } from 'expo-router';
-import { View, Text, Platform, StyleSheet } from 'react-native';
+import { View, Text, Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withSequence,
   FadeInUp,
 } from 'react-native-reanimated';
 import i18n from '../../src/i18n';
 import { Colors, Radius, Shadow } from '../../constants/theme';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import QuickAddSheet from '../../components/QuickAddSheet';
 
 type TabConfig = {
   icon: string;
@@ -21,9 +21,6 @@ type TabConfig = {
 
 const TABS: Record<string, TabConfig> = {
   index: { icon: 'home-outline', lib: 'ion', labelKey: 'home' },
-  symptoms: { icon: 'stethoscope', lib: 'material', labelKey: 'symptoms' },
-  medicine: { icon: 'pill', lib: 'material', labelKey: 'medicine' },
-  records: { icon: 'clipboard-outline', lib: 'ion', labelKey: 'records' },
   profile: { icon: 'person-outline', lib: 'ion', labelKey: 'profile' },
 };
 
@@ -75,56 +72,94 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }): ReactEl
   );
 }
 
-export default function TabLayout(): ReactElement {
-  const insets = useSafeAreaInsets();
+function PlusButton({ onPress }: { onPress: () => void }) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          height: Platform.OS === 'ios' ? 88 : 64 + insets.bottom,
-          paddingTop: 8,
-          paddingBottom: Platform.OS === 'ios' ? 28 : insets.bottom + 4,
-          backgroundColor: Colors.surface,
-          borderTopWidth: 0,
-          elevation: 0,
-          ...Shadow.lg,
-        },
-        tabBarShowLabel: false,
-        tabBarHideOnKeyboard: true,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon name="index" focused={focused} /> }}
+    <Animated.View style={animatedStyle}>
+      <TouchableOpacity
+        style={styles.plusBtn}
+        onPressIn={() => { scale.value = withSpring(0.9); }}
+        onPressOut={() => { scale.value = withSpring(1); }}
+        onPress={onPress}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="add" size={28} color="#fff" />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+export default function TabLayout(): ReactElement {
+  const insets = useSafeAreaInsets();
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+
+  const handleAddPerson = () => {
+    const { router } = require('expo-router');
+    router.push('/(tabs)/family');
+  };
+
+  const handleAddRecord = () => {
+    const { router } = require('expo-router');
+    router.push('/(tabs)/add-record');
+  };
+
+  return (
+    <>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: {
+            height: Platform.OS === 'ios' ? 88 : 64 + insets.bottom,
+            paddingTop: 8,
+            paddingBottom: Platform.OS === 'ios' ? 28 : insets.bottom + 4,
+            backgroundColor: Colors.surface,
+            borderTopWidth: 0,
+            elevation: 0,
+            ...Shadow.lg,
+          },
+          tabBarShowLabel: false,
+          tabBarHideOnKeyboard: true,
+        }}
+      >
+        <Tabs.Screen
+          name="index"
+          options={{ tabBarIcon: ({ focused }) => <TabIcon name="index" focused={focused} /> }}
+        />
+        <Tabs.Screen
+          name="symptoms"
+          options={{
+            href: null,
+            tabBarButton: () => (
+              <View style={styles.plusWrap}>
+                <PlusButton onPress={() => setShowQuickAdd(true)} />
+              </View>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{ tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} /> }}
+        />
+        {/* Hidden screens */}
+        <Tabs.Screen name="medicine" options={{ href: null }} />
+        <Tabs.Screen name="records" options={{ href: null }} />
+        <Tabs.Screen name="notifications" options={{ href: null }} />
+        <Tabs.Screen name="hospitals" options={{ href: null }} />
+        <Tabs.Screen name="family" options={{ href: null }} />
+        <Tabs.Screen name="add-record" options={{ href: null }} />
+      </Tabs>
+
+      <QuickAddSheet
+        visible={showQuickAdd}
+        onClose={() => setShowQuickAdd(false)}
+        onAddPerson={handleAddPerson}
+        onAddRecord={handleAddRecord}
       />
-      <Tabs.Screen
-        name="symptoms"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon name="symptoms" focused={focused} /> }}
-      />
-      <Tabs.Screen
-        name="medicine"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon name="medicine" focused={focused} /> }}
-      />
-      <Tabs.Screen
-        name="records"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon name="records" focused={focused} /> }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} /> }}
-      />
-      {/* Hidden screens accessible via navigation only */}
-      <Tabs.Screen
-        name="notifications"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="hospitals"
-        options={{ href: null }}
-      />
-    </Tabs>
+    </>
   );
 }
 
@@ -149,5 +184,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
     letterSpacing: 0.2,
+  },
+  plusWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    top: Platform.OS === 'ios' ? -8 : -6,
+  },
+  plusBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.md,
   },
 });

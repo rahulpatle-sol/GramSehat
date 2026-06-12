@@ -8,8 +8,8 @@ import Constants from 'expo-constants';
 import i18n from '../../src/i18n';
 import { useAuth } from '../../src/store/AuthContext';
 
-const GOOGLE_CLIENT_ID = Constants.expoConfig?.extra?.googleClientId || 'YOUR_GOOGLE_CLIENT_ID';
-const GOOGLE_IOS_CLIENT_ID = Constants.expoConfig?.extra?.googleIosClientId || 'YOUR_IOS_CLIENT_ID';
+const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || Constants.expoConfig?.extra?.googleClientId || 'YOUR_GOOGLE_CLIENT_ID';
+const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || Constants.expoConfig?.extra?.googleIosClientId || 'YOUR_IOS_CLIENT_ID';
 
 export default function LoginScreen(): ReactElement {
   const [loading, setLoading] = useState<boolean>(false);

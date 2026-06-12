@@ -26,6 +26,7 @@ const MENU_ITEMS = [
   { icon: (color: string) => <MaterialCommunityIcons name="hospital-building" size={24} color={color} />, labelKey: 'nearbyHospitals', route: '/(tabs)/hospitals', color: '#7c3aed' },
   { icon: (color: string) => <Ionicons name="clipboard-outline" size={24} color={color} />, labelKey: 'healthRecords', route: '/(tabs)/records', color: '#d97706' },
   { icon: (color: string) => <Ionicons name="language-outline" size={24} color={color} />, labelKey: 'language', route: null, color: '#0284c7' },
+  { icon: (color: string) => <Ionicons name="swap-horizontal-outline" size={24} color={color} />, labelKey: 'switchAccount', route: 'switch', color: '#7c3aed' },
 ];
 
 export default function ProfileScreen(): ReactElement {
@@ -85,6 +86,22 @@ export default function ProfileScreen(): ReactElement {
     } catch (error) {
       console.error('Error updating language:', error);
     }
+  };
+
+  const handleSwitchAccount = async () => {
+    Alert.alert('Switch Account', 'Choose an option', [
+      {
+        text: 'Add New Account',
+        onPress: async () => {
+          await logout();
+          router.replace('/(auth)/phone');
+        },
+      },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+    ]);
   };
 
   const handleLogout = async () => {
@@ -165,7 +182,10 @@ export default function ProfileScreen(): ReactElement {
             <StaggerItem key={item.labelKey} index={idx}>
               <AnimatedPressable
                 style={styles.menuItem}
-                onPress={() => item.route ? router.push(item.route as any) : {}}
+                onPress={() => {
+                  if (item.route === 'switch') handleSwitchAccount();
+                  else if (item.route) router.push(item.route as any);
+                }}
               >
                 <View style={[styles.menuIconWrap, { backgroundColor: item.color + '15' }]}>
                   {item.icon(item.color)}

@@ -4,7 +4,7 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "start": "bun src/index.js",
+    "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "seed": "node src/seed/phcSeed.js",
     "lint": "eslint src/"

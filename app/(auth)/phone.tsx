@@ -22,7 +22,7 @@ export default function GoogleSignInScreen(): ReactElement {
   const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
-      clientId: 'YOUR_GOOGLE_CLIENT_ID',
+      clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID',
       scopes: ['profile', 'email'],
       redirectUri: AuthSession.makeRedirectUri({ scheme: 'gramsehat' }),
     },

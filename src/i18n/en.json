@@ -119,5 +119,6 @@
   "openSettings": "Open Settings",
   "guest": "Guest",
   "signInRequired": "Sign In Required",
-  "signInToUse": "Please sign in to use this feature"
+  "signInToUse": "Please sign in to use this feature",
+  "switchAccount": "Switch Account"
 }
