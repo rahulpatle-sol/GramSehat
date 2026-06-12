@@ -1,5 +1,5 @@
 import React, { ReactElement, useState, useEffect } from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { View, Text, Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -95,15 +95,14 @@ function PlusButton({ onPress }: { onPress: () => void }) {
 
 export default function TabLayout(): ReactElement {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const handleAddPerson = () => {
-    const { router } = require('expo-router');
     router.push('/(tabs)/family');
   };
 
   const handleAddRecord = () => {
-    const { router } = require('expo-router');
     router.push('/(tabs)/add-record');
   };
 
@@ -130,9 +129,8 @@ export default function TabLayout(): ReactElement {
           options={{ tabBarIcon: ({ focused }) => <TabIcon name="index" focused={focused} /> }}
         />
         <Tabs.Screen
-          name="symptoms"
+          name="quick-add"
           options={{
-            href: null,
             tabBarButton: () => (
               <View style={styles.plusWrap}>
                 <PlusButton onPress={() => setShowQuickAdd(true)} />
@@ -145,6 +143,7 @@ export default function TabLayout(): ReactElement {
           options={{ tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} /> }}
         />
         {/* Hidden screens */}
+        <Tabs.Screen name="symptoms" options={{ href: null }} />
         <Tabs.Screen name="medicine" options={{ href: null }} />
         <Tabs.Screen name="records" options={{ href: null }} />
         <Tabs.Screen name="notifications" options={{ href: null }} />
