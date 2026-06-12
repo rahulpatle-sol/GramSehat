@@ -4,6 +4,7 @@ dotenv.config();
 export default {
   port: process.env.PORT || 5000,
   jwtSecret: process.env.JWT_SECRET || 'default_secret_change_me',
+  googleClientId: process.env.GOOGLE_CLIENT_ID || 'your_google_client_id.apps.googleusercontent.com',
   db: {
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
@@ -21,4 +22,5 @@ export default {
     threshold: parseInt(process.env.OUTBREAK_THRESHOLD) || 10,
     windowHours: parseInt(process.env.OUTBREAK_WINDOW_HRS) || 48,
   },
+  orsApiKey: process.env.ORS_API_KEY || '',
 };

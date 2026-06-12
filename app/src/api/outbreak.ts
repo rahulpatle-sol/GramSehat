@@ -1,4 +1,4 @@
-import { apiClient } from './index';
+import { apiClient } from './client';
 import type { OutbreakAlert } from '../types';
 
 export const outbreakApi = {

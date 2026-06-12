@@ -1,13 +1,38 @@
-import React, { useState, useEffect, ReactElement } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, Platform, StatusBar } from 'react-native';
+import React, { useState, useEffect, ReactElement, useCallback } from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity, FlatList,
+  ActivityIndicator, Platform, StatusBar, Alert, RefreshControl,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import Animated, { FadeInDown, FadeInUp, BounceIn, ZoomIn, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
 import { recordApi, familyApi } from '../../src/api';
 import i18n from '../../src/i18n';
 import type { HealthRecord, FamilyMember } from '../../src/types';
+import { Colors, Spacing, Radius, Shadow, Typography } from '../../constants/theme';
+import {
+  AnimatedPressable, StaggerItem, FadeInSection, SlideInSection,
+  BounceSection,
+} from '../../components/animated';
 
-const RECORD_TYPE_ICONS: Record<string, string> = {
-  checkup: '🩺', prescription: '📄', test: '🧪', vaccination: '💉',
+const RECORD_TYPE_ICONS: Record<string, { family: 'ionicons' | 'material'; name: string }> = {
+  checkup: { family: 'material', name: 'stethoscope' },
+  prescription: { family: 'ionicons', name: 'document-text-outline' },
+  test: { family: 'material', name: 'test-tube' },
+  vaccination: { family: 'material', name: 'needle' },
+};
+
+const RECORD_TYPE_COLORS: Record<string, string> = {
+  checkup: '#059669', prescription: '#d97706', test: '#7c3aed', vaccination: '#0284c7',
+};
+
+const renderRecordIcon = (type: string, size: number, color: string) => {
+  const icon = RECORD_TYPE_ICONS[type] || { family: 'ionicons', name: 'clipboard-outline' };
+  if (icon.family === 'ionicons') {
+    return <Ionicons name={icon.name as any} size={size} color={color} />;
+  }
+  return <MaterialCommunityIcons name={icon.name as any} size={size} color={color} />;
 };
 
 export default function HealthRecordsScreen(): ReactElement {
@@ -15,102 +40,146 @@ export default function HealthRecordsScreen(): ReactElement {
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [selectedMember, setSelectedMember] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async (): Promise<void> => {
+  const loadData = useCallback(async () => {
     try {
-      const [recordsRes, familyRes] = await Promise.all([
-        recordApi.getAll(selectedMember ?? undefined),
+      const [recordData, familyData] = await Promise.all([
+        recordApi.getAll(selectedMember || undefined),
         familyApi.getAll(),
       ]);
-      setRecords(recordsRes.records || []);
-      setFamilyMembers(familyRes.members || []);
+      setRecords(recordData.records || []);
+      setFamilyMembers(familyData.members || []);
     } catch (error) {
       console.error('Error loading records:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
-
-  useEffect(() => {
-    loadData();
   }, [selectedMember]);
 
-  const handleDelete = async (id: number): Promise<void> => {
-    Alert.alert('🗑️ Delete Record', 'Are you sure?', [
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const handleDelete = (id: number) => {
+    Alert.alert('Delete Record', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
-        try {
-          await recordApi.delete(id);
-          loadData();
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Something went wrong';
-          Alert.alert('❌ Error', message);
-        }
+        try { await recordApi.delete(id); loadData(); }
+        catch (e) { console.error('Delete error:', e); }
       }},
     ]);
   };
 
-  const renderRecord = ({ item }: { item: HealthRecord }): ReactElement => (
-    <View style={styles.recordCard}>
-      <View style={styles.recordIcon}>
-        <Text style={styles.recordIconText}>{RECORD_TYPE_ICONS[item.type] || '📋'}</Text>
-      </View>
-      <View style={styles.recordInfo}>
-        <Text style={styles.recordTitle}>{item.title}</Text>
-        <Text style={styles.recordType}>{item.type}</Text>
-        {item.doctorName && <Text style={styles.recordDoctor}>Dr. {item.doctorName}</Text>}
-        <Text style={styles.recordDate}>{new Date(item.date || item.createdAt).toLocaleDateString()}</Text>
-      </View>
-      <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id)}>
-        <Text>🗑️</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const renderRecord = ({ item, index }: { item: HealthRecord; index: number }) => {
+    const typeColor = RECORD_TYPE_COLORS[item.type] || Colors.primary;
+    return (
+      <StaggerItem index={index}>
+        <AnimatedPressable style={styles.recordCard} onPress={() => {}} onLongPress={() => handleDelete(item.id)}>
+          <View style={styles.recordTop}>
+            <View style={[styles.recordIconWrap, { backgroundColor: typeColor + '15' }]}>
+              <BounceSection>
+                {renderRecordIcon(item.type, 22, typeColor)}
+              </BounceSection>
+            </View>
+            <View style={styles.recordInfo}>
+              <Text style={styles.recordTitle} numberOfLines={1}>{item.title}</Text>
+              <View style={styles.recordMeta}>
+                <View style={[styles.recordTypeBadge, { backgroundColor: typeColor + '20' }]}>
+                  <Text style={[styles.recordTypeText, { color: typeColor }]}>{item.type}</Text>
+                </View>
+                {item.memberName && (
+                  <View style={styles.recordMemberRow}>
+                    <Ionicons name="person-outline" size={13} color={Colors.textSecondary} />
+                    <Text style={styles.recordMember}>{item.memberName}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+            <View style={styles.recordDateWrap}>
+              <Text style={styles.recordDate}>
+                {item.date ? new Date(item.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
+              </Text>
+            </View>
+          </View>
+          {item.description && <Text style={styles.recordDesc} numberOfLines={2}>{item.description}</Text>}
+          {(item.doctorName || item.hospitalName) && (
+            <View style={styles.recordFooter}>
+              {item.doctorName && (
+                <View style={styles.recordFooterItem}>
+                  <MaterialCommunityIcons name="doctor" size={14} color={Colors.textSecondary} />
+                  <Text style={styles.recordFooterText}> {item.doctorName}</Text>
+                </View>
+              )}
+              {item.hospitalName && (
+                <View style={styles.recordFooterItem}>
+                  <MaterialCommunityIcons name="hospital-building" size={14} color={Colors.textSecondary} />
+                  <Text style={styles.recordFooterText}> {item.hospitalName}</Text>
+                </View>
+              )}
+            </View>
+          )}
+        </AnimatedPressable>
+      </StaggerItem>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
-      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? insets.top + 10 : 15 }]}>
-        <Text style={styles.headerTitle}>{i18n.t('healthRecords')}</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/(tabs)/add-record')}>
-          <Text style={styles.addBtnText}>+ Add</Text>
-        </TouchableOpacity>
-      </View>
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
 
-      <View style={styles.filterSection}>
-        <TouchableOpacity style={[styles.filterBtn, !selectedMember && styles.filterBtnActive]} onPress={() => setSelectedMember(null)}>
-          <Text style={styles.filterEmoji}>🙋</Text>
-        </TouchableOpacity>
-        {familyMembers.map((member) => (
-          <TouchableOpacity key={member.id} style={[styles.filterBtn, selectedMember === member.id && styles.filterBtnActive]} onPress={() => setSelectedMember(member.id)}>
-            <Text style={styles.filterEmoji}>{member.gender === 'female' ? '👩' : '👨'}</Text>
-          </TouchableOpacity>
-        ))}
+      <FadeInSection>
+        <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? insets.top + 6 : 10 }]}>
+          <Text style={styles.headerTitle}>{i18n.t('healthRecords')}</Text>
+          <AnimatedPressable style={styles.addBtn} onPress={() => router.push('/(tabs)/add-record')}>
+            <Text style={styles.addBtnText}>+</Text>
+          </AnimatedPressable>
+        </View>
+      </FadeInSection>
+
+      <View style={styles.memberFilter}>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={[{ id: null, name: 'All', gender: null, relation: null, userId: 0, age: null, createdAt: '' } as FamilyMember, ...familyMembers]}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.memberFilterList}
+          renderItem={({ item, index }) => (
+            <StaggerItem index={index}>
+              <TouchableOpacity
+                style={[styles.memberChip, selectedMember === item.id && styles.memberChipActive]}
+                onPress={() => setSelectedMember(item.id)}
+              >
+                <Text style={[styles.memberChipText, selectedMember === item.id && styles.memberChipTextActive]}>
+                  {item.name || 'All'}
+                </Text>
+              </TouchableOpacity>
+            </StaggerItem>
+          )}
+        />
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#4CAF50" /></View>
+        <View style={styles.loadingWrap}><ActivityIndicator size="large" color={Colors.primary} /></View>
       ) : (
         <FlatList
           data={records}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderRecord}
           contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={Colors.primary} />}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📋</Text>
-              <Text style={styles.emptyText}>{i18n.t('noData')}</Text>
-              <TouchableOpacity style={styles.addRecordBtn} onPress={() => router.push('/(tabs)/add-record')}>
-                <Text style={styles.addRecordBtnText}>+ Add First Record</Text>
-              </TouchableOpacity>
-            </View>
+            <FadeInSection>
+              <View style={styles.emptyWrap}>
+                <Ionicons name="clipboard-outline" size={72} color={Colors.textTertiary} />
+                <Text style={styles.emptyText}>No records found</Text>
+                <Text style={styles.emptySub}>Tap + to add your first health record</Text>
+                <AnimatedPressable style={styles.emptyBtn} onPress={() => router.push('/(tabs)/add-record')}>
+                  <Text style={styles.emptyBtnText}>Add Record</Text>
+                </AnimatedPressable>
+              </View>
+            </FadeInSection>
           }
         />
       )}
@@ -119,29 +188,52 @@ export default function HealthRecordsScreen(): ReactElement {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#333' },
-  addBtn: { backgroundColor: '#4CAF50', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  addBtnText: { color: 'white', fontWeight: '600' },
-  filterSection: { padding: 16, backgroundColor: '#fff', flexDirection: 'row', gap: 8, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  filterBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' },
-  filterBtnActive: { backgroundColor: '#e8f5e9', borderWidth: 2, borderColor: '#4CAF50' },
-  filterEmoji: { fontSize: 20 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  listContent: { padding: 16 },
-  recordCard: { backgroundColor: 'white', borderRadius: 12, padding: 16, flexDirection: 'row', marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
-  recordIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#e8f5e9', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  recordIconText: { fontSize: 24 },
+  container: { flex: 1, backgroundColor: Colors.background },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm,
+    backgroundColor: Colors.surface, paddingTop: Spacing.sm,
+  },
+  headerTitle: { ...Typography.h2, color: Colors.text },
+  addBtn: {
+    width: 40, height: 40, borderRadius: Radius.md,
+    backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center',
+  },
+  addBtnText: { fontSize: 24, color: Colors.textInverse, fontWeight: '300' },
+  memberFilter: { marginBottom: Spacing.sm, backgroundColor: Colors.surface, paddingBottom: Spacing.md },
+  memberFilterList: { paddingHorizontal: Spacing.lg, gap: Spacing.sm },
+  memberChip: {
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
+    borderRadius: Radius.full, backgroundColor: '#f1f5f9',
+    borderWidth: 1.5, borderColor: Colors.border,
+  },
+  memberChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  memberChipText: { ...Typography.caption, color: Colors.text },
+  memberChipTextActive: { color: Colors.textInverse, fontWeight: '600' },
+  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  listContent: { padding: Spacing.lg, paddingBottom: 100 },
+  recordCard: {
+    backgroundColor: Colors.card, borderRadius: Radius.lg,
+    padding: Spacing.lg, marginBottom: Spacing.md, ...Shadow.sm,
+  },
+  recordTop: { flexDirection: 'row', alignItems: 'center' },
+  recordIconWrap: { width: 44, height: 44, borderRadius: Radius.md, justifyContent: 'center', alignItems: 'center', marginRight: Spacing.md },
   recordInfo: { flex: 1 },
-  recordTitle: { fontSize: 16, fontWeight: '600', color: '#333' },
-  recordType: { fontSize: 12, color: '#4CAF50', textTransform: 'capitalize', marginTop: 2 },
-  recordDoctor: { fontSize: 12, color: '#666', marginTop: 4 },
-  recordDate: { fontSize: 12, color: '#999', marginTop: 4 },
-  deleteBtn: { padding: 8 },
-  emptyContainer: { alignItems: 'center', padding: 40 },
-  emptyIcon: { fontSize: 64, marginBottom: 16 },
-  emptyText: { fontSize: 16, color: '#666', marginBottom: 20 },
-  addRecordBtn: { backgroundColor: '#4CAF50', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20 },
-  addRecordBtnText: { color: 'white', fontWeight: '600' },
+  recordTitle: { ...Typography.bodyBold, color: Colors.text },
+  recordMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 4 },
+  recordTypeBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.sm },
+  recordTypeText: { fontSize: 11, fontWeight: '600' },
+  recordMemberRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  recordMember: { ...Typography.small, color: Colors.textSecondary },
+  recordDateWrap: { marginLeft: Spacing.sm },
+  recordDate: { ...Typography.smallBold, color: Colors.textTertiary },
+  recordDesc: { ...Typography.caption, color: Colors.textSecondary, marginTop: Spacing.sm, lineHeight: 20 },
+  recordFooter: { flexDirection: 'row', gap: Spacing.lg, marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.border },
+  recordFooterItem: { flexDirection: 'row', alignItems: 'center' },
+  recordFooterText: { ...Typography.small, color: Colors.textSecondary },
+  emptyWrap: { alignItems: 'center', padding: Spacing.xxxl * 2, paddingTop: 80 },
+  emptyText: { ...Typography.h3, color: Colors.text },
+  emptySub: { ...Typography.caption, color: Colors.textSecondary, marginTop: Spacing.sm },
+  emptyBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.md, marginTop: Spacing.xl },
+  emptyBtnText: { ...Typography.captionBold, color: Colors.textInverse },
 });

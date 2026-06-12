@@ -9,21 +9,20 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "extra": {
-      "googleClientId": "YOUR_GOOGLE_CLIENT_ID",
-      "googleIosClientId": "YOUR_IOS_CLIENT_ID",
       "apiUrl": "YOUR_API_URL"
     },
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#4CAF50"
+      "backgroundColor": "#2E7D32"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.gramsehat.app",
       "infoPlist": {
         "NSFaceIDUsageDescription": "We use Face ID for secure authentication",
-        "NSCameraUsageDescription": "We need camera access to scan medicines"
+        "NSCameraUsageDescription": "We need camera access to scan medicines",
+        "NSLocationWhenInUseUsageDescription": "We need your location to find nearby healthcare centers and auto-fill your address"
       }
     },
     "android": {
@@ -35,7 +34,11 @@
       "edgeToEdgeEnabled": true,
       "package": "com.gramsehat.app",
       "versionCode": 1,
-      "permissions": ["CAMERA"]
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -49,10 +52,18 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#4CAF50"
+          "backgroundColor": "#2E7D32"
         }
       ],
-      "expo-camera"
+      "expo-camera",
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow GramSehat to use your location to find nearby healthcare centers.",
+          "locationWhenInUsePermission": "Allow GramSehat to use your location to find nearby healthcare centers."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

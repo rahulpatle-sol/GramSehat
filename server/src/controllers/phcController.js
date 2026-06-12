@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { fetchNearbyWithExpansion } from '../services/overpass.js';
 
 export const getNearbyPhc = async (req, res) => {
   try {
@@ -7,12 +8,12 @@ export const getNearbyPhc = async (req, res) => {
     if (pincode) {
       let query = `SELECT * FROM phc_centers WHERE pincode = $1`;
       const params = [pincode];
-      
+
       if (type) {
         query += ` AND type = $2`;
         params.push(type);
       }
-      
+
       query += ` ORDER BY type, name`;
       const result = await pool.query(query, params);
       return res.json({ centers: result.rows });
@@ -24,12 +25,14 @@ export const getNearbyPhc = async (req, res) => {
 
     const latFloat = parseFloat(lat);
     const lngFloat = parseFloat(lng);
+    const radiusFloat = parseFloat(radius);
 
-    const result = await pool.query(
+    // Fetch from local DB with haversine
+    const dbResult = await pool.query(
       `SELECT *,
         (6371 * acos(
-          LEAST(1.0, GREATEST(-1.0, 
-            COS(RADIANS($1)) * COS(RADIANS(lat)) * COS(RADIANS(lng) - RADIANS($2)) + 
+          LEAST(1.0, GREATEST(-1.0,
+            COS(RADIANS($1)) * COS(RADIANS(lat)) * COS(RADIANS(lng) - RADIANS($2)) +
             SIN(RADIANS($1)) * SIN(RADIANS(lat))
           ))
         )) AS distance
@@ -39,7 +42,30 @@ export const getNearbyPhc = async (req, res) => {
       [latFloat, lngFloat]
     );
 
-    res.json({ centers: result.rows });
+    let centers = dbResult.rows.map(c => ({
+      ...c,
+      source: 'local',
+    }));
+
+    // Augment with Overpass API results
+    try {
+      const osmResult = await fetchNearbyWithExpansion(latFloat, lngFloat, radiusFloat);
+      if (osmResult.centers.length > 0) {
+        const merged = [...centers, ...osmResult.centers];
+        const seen = new Set();
+        centers = merged.filter(c => {
+          const key = c.name.toLowerCase().trim();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        centers.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+      }
+    } catch (osmErr) {
+      console.error('Overpass augmentation failed:', osmErr.message);
+    }
+
+    res.json({ centers: centers.slice(0, 50) });
   } catch (error) {
     console.error('Get nearby PHC error:', error);
     res.status(500).json({ error: 'Failed to get nearby PHC centers' });
@@ -49,6 +75,11 @@ export const getNearbyPhc = async (req, res) => {
 export const getPhcDetails = async (req, res) => {
   try {
     const { id } = req.params;
+    const isOsm = req.query.source === 'osm';
+
+    if (isOsm) {
+      return res.status(400).json({ error: 'OSM details not available via this endpoint' });
+    }
 
     const result = await pool.query(`SELECT * FROM phc_centers WHERE id = $1`, [id]);
 
@@ -66,6 +97,10 @@ export const getPhcDetails = async (req, res) => {
 export const searchPhc = async (req, res) => {
   try {
     const { q, type } = req.query;
+
+    if (!q || q.length < 2) {
+      return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+    }
 
     let query = `SELECT * FROM phc_centers WHERE 1=1`;
     const params = [];

@@ -1,11 +1,12 @@
 import pool from './db.js';
 
 const schema = `
--- Users table
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
+  google_id VARCHAR(255) UNIQUE,
+  email VARCHAR(255),
   name VARCHAR(255),
-  phone VARCHAR(20) UNIQUE NOT NULL,
+  avatar TEXT,
   pincode VARCHAR(10),
   village VARCHAR(255),
   district VARCHAR(255),
@@ -13,11 +14,13 @@ CREATE TABLE IF NOT EXISTS users (
   role VARCHAR(50) DEFAULT 'user',
   fcm_token TEXT,
   language VARCHAR(10) DEFAULT 'hi',
+  trust_score INTEGER DEFAULT 10,
+  verified_resident BOOLEAN DEFAULT FALSE,
+  last_report_date TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Family members table
 CREATE TABLE IF NOT EXISTS family_members (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -28,7 +31,6 @@ CREATE TABLE IF NOT EXISTS family_members (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Symptom reports table
 CREATE TABLE IF NOT EXISTS symptom_reports (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -44,7 +46,6 @@ CREATE TABLE IF NOT EXISTS symptom_reports (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Outbreak alerts table
 CREATE TABLE IF NOT EXISTS outbreak_alerts (
   id SERIAL PRIMARY KEY,
   pincode VARCHAR(10) NOT NULL,
@@ -60,7 +61,6 @@ CREATE TABLE IF NOT EXISTS outbreak_alerts (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Medicines table
 CREATE TABLE IF NOT EXISTS medicines (
   id SERIAL PRIMARY KEY,
   barcode VARCHAR(100) UNIQUE,
@@ -78,7 +78,6 @@ CREATE TABLE IF NOT EXISTS medicines (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Health records table
 CREATE TABLE IF NOT EXISTS health_records (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -93,7 +92,6 @@ CREATE TABLE IF NOT EXISTS health_records (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ASHA workers table
 CREATE TABLE IF NOT EXISTS asha_workers (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -106,7 +104,6 @@ CREATE TABLE IF NOT EXISTS asha_workers (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- PHC centers table
 CREATE TABLE IF NOT EXISTS phc_centers (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -122,17 +119,6 @@ CREATE TABLE IF NOT EXISTS phc_centers (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- OTPs table for verification
-CREATE TABLE IF NOT EXISTS otps (
-  id SERIAL PRIMARY KEY,
-  phone VARCHAR(20) NOT NULL,
-  otp VARCHAR(6) NOT NULL,
-  expires_at TIMESTAMP NOT NULL,
-  used BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Indexes
 CREATE INDEX IF NOT EXISTS idx_symptom_reports_pincode ON symptom_reports(pincode);
 CREATE INDEX IF NOT EXISTS idx_symptom_reports_created_at ON symptom_reports(created_at);
 CREATE INDEX IF NOT EXISTS idx_outbreak_alerts_pincode ON outbreak_alerts(pincode);
@@ -158,6 +144,18 @@ async function initDB() {
     console.log('Connected to Neon PostgreSQL!');
     await client.query(schema);
     console.log('Schema created successfully!');
+
+    // Remove duplicate PHC centers keeping only the oldest
+    await client.query(`
+      DELETE FROM phc_centers a USING phc_centers b
+      WHERE a.id > b.id AND a.name = b.name AND a.pincode = b.pincode
+    `);
+    console.log('PHC duplicates cleaned');
+
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_phc_centers_name_pincode ON phc_centers(name, pincode)
+    `);
+    console.log('PHC unique index created');
 
     for (const center of phcCenters) {
       await client.query(

@@ -6,12 +6,6 @@ export const apiLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later' },
 });
 
-export const otpLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 3,
-  message: { error: 'Too many OTP requests, please try again after a minute' },
-});
-
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,

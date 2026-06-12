@@ -1,3 +1,10 @@
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err.message, err.stack);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('UNHANDLED REJECTION:', err.message, err?.stack);
+});
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -7,15 +14,20 @@ import initDB from './config/initDb.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import './jobs/scheduler.js';
+import { createStatusTables } from './monitoring/status.model.js';
+import { trackRequest } from './monitoring/monitoring.service.js';
+import './monitoring/monitor.job.js';
 
 import authRoutes from './routes/auth.js';
 import symptomRoutes from './routes/symptoms.js';
-import outbreakRoutes from './routes/outbreak.js';
+import outbreakRoutes from './routes/outbreak.js'
 import medicineRoutes from './routes/medicine.js';
 import recordRoutes from './routes/records.js';
 import familyRoutes from './routes/family.js';
 import phcRoutes from './routes/phc.js';
 import ashaRoutes from './routes/asha.js';
+import locationRoutes from './routes/location.js';
+import monitoringRoutes from './monitoring/monitoring.routes.js';
 
 const app = express();
 
@@ -25,6 +37,14 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    trackRequest(Date.now() - start, res.statusCode >= 400);
+  });
+  next();
+});
+
 app.use('/api/auth', apiLimiter, authRoutes);
 app.use('/api/symptoms', symptomRoutes);
 app.use('/api/outbreak', outbreakRoutes);
@@ -33,9 +53,13 @@ app.use('/api/records', recordRoutes);
 app.use('/api/family', familyRoutes);
 app.use('/api/phc', phcRoutes);
 app.use('/api/asha', ashaRoutes);
+app.use('/api/location', locationRoutes);
 
+app.use('/', monitoringRoutes);
+
+// Backward compat
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.redirect('/health');
 });
 
 app.use(notFoundHandler);
@@ -44,6 +68,7 @@ app.use(errorHandler);
 async function startServer() {
   try {
     await initDB();
+    await createStatusTables();
     console.log('Database initialized');
 
     app.listen(config.port, () => {

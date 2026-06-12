@@ -1,4 +1,4 @@
-import { apiClient } from './index';
+import { apiClient } from './client';
 import type { HealthRecord, HealthRecordData } from '../types';
 
 export const recordApi = {

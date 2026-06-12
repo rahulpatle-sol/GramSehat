@@ -1,4 +1,4 @@
-import { apiClient } from './index';
+import { apiClient } from './client';
 import type { OutbreakAlert, SymptomReport } from '../types';
 
 export const ashaApi = {

@@ -1,4 +1,4 @@
-import { apiClient } from './index';
+import { apiClient } from './client';
 import type { AuthResponse, User, ProfileUpdateData } from '../types';
 
 export const authApi = {

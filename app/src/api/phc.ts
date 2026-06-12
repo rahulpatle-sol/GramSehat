@@ -1,4 +1,4 @@
-import { apiClient } from './index';
+import { apiClient } from './client';
 import type { PhcCenter } from '../types';
 
 export const phcApi = {

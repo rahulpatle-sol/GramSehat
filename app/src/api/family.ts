@@ -1,4 +1,4 @@
-import { apiClient } from './index';
+import { apiClient } from './client';
 import type { FamilyMember, FamilyMemberData } from '../types';
 
 export const familyApi = {

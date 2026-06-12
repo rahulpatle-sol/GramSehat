@@ -1,14 +1,9 @@
 import { apiClient } from '../../app/src/api/client';
-import type { AuthResponse, OtpResponse, ProfileUpdateData, User } from '../types';
+import type { AuthResponse, GoogleAuthResponse, ProfileUpdateData, User } from '../types';
 
 export const authApi = {
-  sendOtp: async (phone: string): Promise<OtpResponse> => {
-    const response = await apiClient.post<OtpResponse>('/auth/send-otp', { phone });
-    return response;
-  },
-
-  verifyOtp: async (phone: string, otp: string): Promise<AuthResponse> => {
-    const response = await apiClient.post<AuthResponse>('/auth/verify-otp', { phone, otp });
+  googleAuth: async (idToken: string): Promise<AuthResponse> => {
+    const response = await apiClient.post<AuthResponse>('/auth/google', { idToken });
     return response;
   },
 

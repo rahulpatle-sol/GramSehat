@@ -4,7 +4,7 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "bun src/index.js",
     "dev": "node --watch src/index.js",
     "seed": "node src/seed/phcSeed.js",
     "lint": "eslint src/"
@@ -26,6 +26,7 @@
     "node-cron": "^3.0.3",
     "pg": "^8.13.0",
     "pg-pool": "^3.6.0",
+    "twilio": "^5.13.1",
     "uuid": "^11.0.3"
   },
   "devDependencies": {

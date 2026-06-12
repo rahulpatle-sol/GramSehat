@@ -6,3 +6,4 @@ export { outbreakApi } from './outbreak';
 export { phcApi } from './phc';
 export { recordApi } from './records';
 export { symptomApi } from './symptoms';
+export { locationApi } from './location';

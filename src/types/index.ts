@@ -1,7 +1,9 @@
 export interface User {
   id: number;
   name: string | null;
-  phone: string;
+  googleId?: string;
+  email?: string;
+  avatar?: string;
   pincode: string | null;
   village: string | null;
   district: string | null;
@@ -9,7 +11,13 @@ export interface User {
   role: 'user' | 'asha_worker' | 'admin';
   fcmToken?: string | null;
   language: 'hi' | 'en';
+  trustScore?: number;
+  verifiedResident?: boolean;
   isProfileComplete: boolean;
+}
+
+export interface GuestUser {
+  isGuest: true;
 }
 
 export interface AuthResponse {
@@ -97,24 +105,29 @@ export interface HealthRecord {
 }
 
 export interface PhcCenter {
-  id: number;
+  id?: number;
+  osmId?: number;
   name: string;
   address: string | null;
   pincode: string | null;
   lat: number | null;
   lng: number | null;
   phone: string | null;
-  type: 'PHC' | 'CHC' | 'hospital' | 'clinic';
-  services: string[];
-  timings: string | null;
-  isGovt: boolean;
+  type: 'PHC' | 'CHC' | 'hospital' | 'clinic' | 'pharmacy';
+  services?: string[];
+  timings?: string | null;
+  isGovt?: boolean;
   distance?: number;
+  source?: 'local' | 'osm';
+  location?: {
+    lat: number;
+    lng: number;
+  };
 }
 
-export interface OtpResponse {
-  success: boolean;
-  message: string;
-  otp?: string;
+export interface GoogleAuthResponse {
+  token: string;
+  user: User;
 }
 
 export interface ProfileUpdateData {

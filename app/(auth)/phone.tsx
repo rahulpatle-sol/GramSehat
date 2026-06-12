@@ -1,107 +1,155 @@
 import React, { useState, ReactElement } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, StatusBar } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
+import Animated, { FadeInDown, FadeInUp, BounceIn } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/store/AuthContext';
 import i18n from '../../src/i18n';
+import { Colors, Spacing, Radius, Shadow, Typography } from '../../constants/theme';
 
-export default function PhoneScreen(): ReactElement {
-  const [phone, setPhone] = useState<string>('');
+WebBrowser.maybeCompleteAuthSession();
+
+export default function GoogleSignInScreen(): ReactElement {
   const [loading, setLoading] = useState<boolean>(false);
-  const { sendOtp } = useAuth();
+  const { googleSignIn, continueAsGuest } = useAuth();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
 
-  const handleSendOtp = async (): Promise<void> => {
-    if (!phone || phone.length < 10) {
-      Alert.alert(i18n.t('error'), 'Please enter a valid phone number');
-      return;
-    }
+  const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: 'YOUR_GOOGLE_CLIENT_ID',
+      scopes: ['profile', 'email'],
+      redirectUri: AuthSession.makeRedirectUri({ scheme: 'gramsehat' }),
+    },
+    discovery
+  );
 
+  const handleGoogleSignIn = async (): Promise<void> => {
     setLoading(true);
     try {
-      const result = await sendOtp(phone);
-      if (result?.otp) {
-        Alert.alert('🔔 OTP', `Your OTP is: ${result.otp}`, [
-          {
-            text: 'Continue',
-            onPress: () => router.push({ pathname: '/(auth)/otp', params: { phone } }),
-          },
-        ]);
-      } else {
-        router.push({ pathname: '/(auth)/otp', params: { phone } });
+      const result = await promptAsync();
+      if (result?.type === 'success') {
+        const { id_token } = result.params;
+        if (id_token) {
+          const authResponse = await googleSignIn(id_token);
+          if (authResponse.user.isProfileComplete) {
+            router.replace('/(tabs)');
+          } else {
+            router.replace('/(auth)/profile-setup');
+          }
+        }
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Something went wrong';
-      Alert.alert(i18n.t('error'), message);
+      const message = error instanceof Error ? error.message : 'Google Sign-In failed';
+      Alert.alert('Error', message);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGuestMode = async (): Promise<void> => {
+    await continueAsGuest();
+    router.replace('/(tabs)');
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#4CAF50" />
-      
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.content}
-      >
-        <View style={styles.header}>
-          <View style={styles.logo}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+
+      <View style={styles.content}>
+        <Animated.View entering={BounceIn.duration(800).springify()} style={styles.logoWrap}>
+          <View style={styles.logoCircle}>
             <Text style={styles.logoText}>GS</Text>
           </View>
-          <Text style={styles.title}>GramSehat</Text>
-          <Text style={styles.subtitle}>{i18n.t('tagline')}</Text>
-        </View>
+        </Animated.View>
 
-        <View style={styles.form}>
-          <Text style={styles.label}>{i18n.t('phoneNumber')}</Text>
-          <View style={styles.phoneInputContainer}>
-            <Text style={styles.countryCode}>+91</Text>
-            <TextInput
-              style={styles.phoneInput}
-              placeholder={i18n.t('enterPhone')}
-              placeholderTextColor="#999"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-              maxLength={10}
-              autoComplete="tel"
-            />
-          </View>
+        <Animated.Text entering={FadeInDown.delay(200).springify()} style={styles.title}>
+          GramSehat
+        </Animated.Text>
+        <Animated.Text entering={FadeInDown.delay(300).springify()} style={styles.subtitle}>
+          {i18n.t('tagline')}
+        </Animated.Text>
+
+        <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.card}>
+          <Text style={styles.cardTitle}>Welcome</Text>
+          <Text style={styles.cardDesc}>Sign in to save your health data or continue as guest</Text>
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleSendOtp}
-            disabled={loading}
+            style={[styles.googleBtn, loading && styles.disabled]}
+            onPress={handleGoogleSignIn}
+            disabled={loading || !request}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={Colors.text} />
             ) : (
-              <Text style={styles.buttonText}>{i18n.t('sendOtp')}</Text>
+              <>
+                <Ionicons name="logo-google" size={22} color="#DB4437" />
+                <Text style={styles.googleBtnText}>Continue with Google</Text>
+              </>
             )}
           </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity style={styles.guestBtn} onPress={handleGuestMode}>
+            <Ionicons name="person-outline" size={20} color={Colors.textSecondary} />
+            <Text style={styles.guestBtnText}>Continue as Guest</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.disclaimer}>
+            By continuing, you agree to our Terms of Service
+          </Text>
+        </Animated.View>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#4CAF50' },
-  content: { flex: 1, justifyContent: 'center', padding: 24 },
-  header: { alignItems: 'center', marginBottom: 48 },
-  logo: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center', marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
-  logoText: { fontSize: 32, fontWeight: 'bold', color: '#4CAF50' },
-  title: { fontSize: 32, fontWeight: 'bold', color: 'white', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: 'rgba(255,255,255,0.9)', textAlign: 'center' },
-  form: { backgroundColor: 'white', borderRadius: 16, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
-  label: { fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 12 },
-  phoneInputContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#ddd', borderRadius: 12, marginBottom: 24, overflow: 'hidden' },
-  countryCode: { paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#f5f5f5', fontSize: 16, color: '#333', borderRightWidth: 1, borderRightColor: '#ddd' },
-  phoneInput: { flex: 1, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: '#333' },
-  button: { backgroundColor: '#4CAF50', borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
-  buttonDisabled: { opacity: 0.7 },
-  buttonText: { color: 'white', fontSize: 18, fontWeight: '600' },
+  container: { flex: 1, backgroundColor: Colors.primary },
+  content: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xxl },
+  logoWrap: { marginBottom: Spacing.lg },
+  logoCircle: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
+    ...Shadow.lg,
+  },
+  logoText: { fontSize: 32, fontWeight: 'bold', color: Colors.primary },
+  title: { fontSize: 32, fontWeight: 'bold', color: '#fff', marginBottom: Spacing.sm },
+  subtitle: { fontSize: 16, color: 'rgba(255,255,255,0.9)', textAlign: 'center', marginBottom: 48 },
+  card: {
+    backgroundColor: '#fff', borderRadius: Radius.xl,
+    padding: Spacing.xxl, width: '100%', alignItems: 'center',
+    ...Shadow.xl,
+  },
+  cardTitle: { ...Typography.h2, color: Colors.text, marginBottom: Spacing.sm },
+  cardDesc: { ...Typography.caption, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.xxl },
+  googleBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.md, width: '100%',
+    paddingVertical: Spacing.lg, borderRadius: Radius.lg,
+    borderWidth: 1.5, borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  disabled: { opacity: 0.7 },
+  googleBtnText: { ...Typography.bodyBold, color: Colors.text, fontSize: 16 },
+  divider: { flexDirection: 'row', alignItems: 'center', width: '100%', marginVertical: Spacing.xl },
+  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
+  dividerText: { marginHorizontal: Spacing.md, color: Colors.textTertiary, fontSize: 14 },
+  guestBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.sm, width: '100%',
+    paddingVertical: Spacing.md,
+  },
+  guestBtnText: { ...Typography.captionBold, color: Colors.textSecondary, fontSize: 15 },
+  disclaimer: { fontSize: 12, color: Colors.textTertiary, textAlign: 'center', marginTop: Spacing.xl },
 });
